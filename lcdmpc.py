@@ -541,7 +541,7 @@ class subsystem():
             # print('u part: ', (dot(dot(tp(self.uOpt), self.H), self.uOpt) \
                         # + 2*dot(tp(self.uOpt), self.F)))
             # print('v part: ', dot(dot(tp(self.V), self.E), self.V) \
-            #             + 2*dot(tp(self.V), self.T))
+            #             + 2emissions*dot(tp(self.V), self.T))
         # print('obj_func: ', np.shape(funcs['obj']))
         # Compute constraints, if any are defined for control model
         # print('!!!!!: ', funcs['obj'])

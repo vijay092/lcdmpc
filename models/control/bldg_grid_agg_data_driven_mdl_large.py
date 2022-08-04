@@ -19,6 +19,7 @@ class bldg_grid_agg_data_driven_mdl_large:
         Qsol_scale,
         Qint_offset,
         Qsol_offset,
+        emission_factor = 0
     ):
         # TODO: normalize to make automatic
         self.gamma_scale = 1e0
@@ -58,6 +59,7 @@ class bldg_grid_agg_data_driven_mdl_large:
         self.Qsol_offset = Qsol_offset
 
         self.energy_red_weight = energy_red_weight
+        self.emission_factor = emission_factor
 
     def reinit(self, inputs, disturbances):
         # inputs
@@ -178,20 +180,17 @@ class bldg_grid_agg_data_driven_mdl_large:
             # Q[i] = np.zeros(len(Q))
             Q[i] = Q[i] * 1.0e0
         for i in np.arange(3, len(Q), 4):
-            Q[i] = np.zeros(len(Q))
-            # Q[i] = Q[i]*1.0e0
 
-        # print(Q)
+            # Emissions terms
+            Q[i] = Q[i] * self.emission_factor
 
-        # manual scaling of weight parameters
-        # TODO: normalize to automate weighting
-        # return Q*1.0e-5
         return Q
 
     def process_S(self, S):
         # manual scaling of weight parameters
         # TODO: normalize to automate weighting
         # S = S*5.0e-8
+        # No wieght on
         S = S * 0.0
         # S = S*self.energy_red_weight
         return S
@@ -223,6 +222,7 @@ class bldg_grid_agg_data_driven_mdl_large:
         return refs
 
     def process_refs_horiz(self, refs, refs_const):
+
         refs = (
             np.array(refs_const)
             - np.array(
@@ -359,6 +359,8 @@ class bldg_grid_agg_data_driven_mdl_large:
 
     def bldg_fan_emissions(self, inputs):
         ms_dot = inputs[1]
+        # There should be a conversion term here
+        emission_fac = 1
         emissions = inputs[4]
         emissions_fan = emissions * (
             self.a0 * ms_dot**3

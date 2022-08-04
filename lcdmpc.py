@@ -310,6 +310,7 @@ class subsystem():
         self.horiz_len = horiz_len
         self.Beta = Beta
         
+        # Typically, self.refs is given to us. 
         if refs is not None:
             self.refs = refs 
             self.refs_const = copy.deepcopy(self.refs)
@@ -320,11 +321,7 @@ class subsystem():
         if refs_total is not None:
             self.refs_total = refs_total
             self.refs = self.control_model.process_refs_horiz(refs_total=self.refs_total, current_time=self.current_time)
-        # self.refs = self.refs - self.control_model.truth_model_Pwr \
-        #     + self.control_model.Cy_lin \
-        #     + self.control_model.Dyu_lin \
-        #     + self.control_model.Dyd_lin
-        # print('initial refs: ', self.refs)
+
 
         self.disturbance_file = disturbance_file
         self.disturbance_data = pd.read_csv(self.disturbance_file)
@@ -377,6 +374,7 @@ class subsystem():
         self.Psi = np.zeros((self.nxMz, 1))
         # print('initial horizon refs: ', self.refs)
         self.sol = []
+
 
     def update_control_filter(self):
         # print('self.y before filter: ', self.y)
@@ -1405,6 +1403,7 @@ class subsystem():
 
         # TODO: make this work for user-supplied Q's and S's
         self.Q = np.diag(np.ones(self.nxMy))
+        # Change the weighting on different objectives
         self.Q = self.control_model.process_Q(self.Q)
         
         self.S = np.diag(np.ones(self.nyMy))

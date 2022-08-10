@@ -19,7 +19,7 @@ class bldg_grid_agg_data_driven_mdl_large:
         Qsol_scale,
         Qint_offset,
         Qsol_offset,
-        emission_factor = 0
+        emission_factor=0,
     ):
         # TODO: normalize to make automatic
         self.gamma_scale = 1e0

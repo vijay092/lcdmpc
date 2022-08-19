@@ -76,7 +76,6 @@ class LCDMPC:
 
         # TODO: change to date-time; update in other places
         self.current_time = self.current_time + self.time_step
-
         return outputs
 
     def calc_stability(self):
@@ -437,14 +436,14 @@ class subsystem:
         self.horiz_len = horiz_len
         self.Beta = Beta
 
-        # Typically, self.refs is given to us.
+        # Typically, self.refs is not given
         if refs is not None:
             self.refs = refs
             self.refs_const = copy.deepcopy(self.refs)
             self.refs = self.control_model.process_refs(self.refs)
             self.refs = self.refs * self.horiz_len
             self.refs_const = self.refs_const * self.horiz_len
-
+        # This is given:
         if refs_total is not None:
             self.refs_total = refs_total
             self.refs = self.control_model.process_refs_horiz(

@@ -10,6 +10,9 @@ from models.control.bldg_grid_agg_data_driven_bldg60 import (
     bldg_grid_agg_data_driven_bldg60,
 )
 
+from numpy import trapz
+
+
 # from models.control.bldg_grid_agg_data_driven_bldg62 import bldg_grid_agg_data_driven_bldg62
 from models.control.bldg_grid_agg_data_driven_mdl_large import (
     bldg_grid_agg_data_driven_mdl_large,
@@ -29,7 +32,9 @@ from models.simulation.bldg_sim_mdl_small import bldg_sim_mdl_small
 from models.control.grid_aggregator import grid_aggregator
 
 
-def compute_emissons(no_hr_sim=1, emissions_factor=0):
+def compute_emissons(
+    no_hr_sim=3, emissions_factor=0, temperature_factor=0, tracking_factor=0
+):
     dt_num_offset = 30
 
     start_time = 24 * 60 - dt_num_offset  # Start time in minutes; 700
@@ -131,16 +136,39 @@ def compute_emissons(no_hr_sim=1, emissions_factor=0):
     Toa_horiz_normed = Toa_horiz / Toa_horiz[0]
 
     np.random.seed(1)
-    grid_agg_ref = (
-        np.random.normal(
-            6 * num_buildings_small
-            + 20 * num_buildings_medium
-            + 10 * num_buildings_large,
-            0.0,
-            int(time / dt) + horiz_len,
-        )
-        * Toa_horiz_normed
+    ## long term scenario (started from beginning)
+    x = 30
+    y = 30
+    grid_agg_ref1 = np.random.normal(
+        6 * num_buildings_small
+        + 30 * num_buildings_medium
+        + 10 * num_buildings_large
+        + 40,
+        0.05,
+        x,
     )
+    grid_agg_ref2 = np.random.normal(
+        6 * num_buildings_small
+        + 30 * num_buildings_medium
+        + 10 * num_buildings_large
+        + 40,
+        0.05,
+        y,
+    )
+    grid_agg_ref3 = np.random.normal(
+        6 * num_buildings_small
+        + 30 * num_buildings_medium
+        + 10 * num_buildings_large
+        + 40,
+        0.05,
+        (int(time / dt) - (x + y)) + horiz_len,
+    )
+    grid_agg_ref = np.concatenate(
+        (grid_agg_ref1, grid_agg_ref2, grid_agg_ref3)
+    )
+
+    plt.plot(grid_agg_ref)
+    plt.title("GA ref")
 
     # This reference is for the grid aggregator, not the building
     refs_grid_total = pd.DataFrame()
@@ -153,6 +181,7 @@ def compute_emissons(no_hr_sim=1, emissions_factor=0):
             },
             ignore_index=True,
         )
+
     bldg_optoptions_large = {
         # 'Major feasibility tolerance': 1e1,
         "Print file": "SNOPT_bldg_lg_print.out",
@@ -215,6 +244,8 @@ def compute_emissons(no_hr_sim=1, emissions_factor=0):
                 Qint_offset[i],
                 Qsol_offset[i],
                 emissions_factor=emissions_factor,
+                temperature_factor=temperature_factor,
+                tracking_factor=tracking_factor,
             )
         )
         building_truth_models.append(
@@ -303,6 +334,7 @@ def compute_emissons(no_hr_sim=1, emissions_factor=0):
     grid_agg1_cont = grid_aggregator(horiz_len, num_downstream1)
     grid_agg1_truth = grid_aggregator(horiz_len, num_downstream1)
 
+    # this is the GA
     tmp.build_subsystem(
         0,
         grid_agg1_cont,
@@ -377,10 +409,6 @@ def compute_emissons(no_hr_sim=1, emissions_factor=0):
 
     for i in range(int(time / dt)):
 
-        print("+++++++++++++++++++++++++++++")
-        print("time iteration: ", i)
-        print("+++++++++++++++++++++++++++++")
-
         # TODO: Need to map states to updated state (LPV like)
 
         tmp.relinearize_subsystem_models()
@@ -398,9 +426,6 @@ def compute_emissons(no_hr_sim=1, emissions_factor=0):
 
             gamma_comm.append(tmp.calculate_sensitivities())
 
-            # print('==============================')
-            print("communication iteration: ", j)
-            # print('==============================')
         # Update state equations for subsystems
         tmp.update_states()
         # Update outputs of subsystems
@@ -421,7 +446,6 @@ def compute_emissons(no_hr_sim=1, emissions_factor=0):
         controls_all.append([[subsys.uConv] for subsys in tmp.subsystems])
         gamma_all.append(gamma_comm)
 
-    # Important stuff for plotting:
     # Temperature inner
     plot_temps = []
     for i in range(num_buildings_total):
@@ -433,11 +457,6 @@ def compute_emissons(no_hr_sim=1, emissions_factor=0):
         plot_bldg_powers.append(
             [val[i + 1 :][0][1][0][0] for val in outputs_all]
         )
-
-    # print(outputs_all)
-    # print('-------------')
-    # print(outputs_all[0][0])
-    # print(outputs_all[0][0][0])
 
     # GA output
     grid_prefs_ind = []
@@ -455,12 +474,37 @@ def compute_emissons(no_hr_sim=1, emissions_factor=0):
 
     disturbance_data = pd.read_csv(bldg1_disturb_file)
 
+    emissions_used = np.multiply(
+        disturbance_data.iloc[
+            start_time + dt_num_offset : start_time + int(time / dt)
+        ]["emmissions"].values,
+        np.array(total_power).flatten()[dt_num_offset:] / 1e3,
+    )
+
+    emissions_rate = disturbance_data.iloc[
+        start_time + dt_num_offset : start_time + int(time / dt)
+    ]["emmissions"].values
+
+    grid_prefs_ind = []
+    for i in range(num_buildings_total):
+        grid_prefs_ind.append([val[0][i][0] for val in outputs_all])
     return_dict = {
-        "time (min)": time_array[dt_num_offset:],
+        "time (min)": list(time_array[dt_num_offset:]),
         "Total Power (kW)": total_power[dt_num_offset:],
-        "Temperature (C)": plot_temps.flatten()[dt_num_offset:],
-        "Emissions (kg of CO2)": [],
-        "Error (%)": error,
+        "Temperature (C)": plot_temps[0][dt_num_offset:],
+        "Emissions (kg of CO2)": emissions_used,
+        "Emissions Rate (kg of CO2/MWh)": emissions_rate,
+        "Grid Power Reference (kW)": grid_agg_ref[
+            dt_num_offset - 1 : time - 1
+        ],
+        "Error (%)": np.array(
+            (
+                np.array(grid_agg_ref[dt_num_offset - 1 : time - 1])
+                - np.array(total_power).flatten()[dt_num_offset:]
+            )
+            / np.array(grid_agg_ref[dt_num_offset - 1 : time - 1])
+            * 100
+        ),
     }
-    df_return = pd.DataFrame(return_dict)
-    return df_return
+
+    return pd.DataFrame(return_dict)

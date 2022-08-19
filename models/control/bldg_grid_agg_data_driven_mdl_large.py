@@ -19,7 +19,9 @@ class bldg_grid_agg_data_driven_mdl_large:
         Qsol_scale,
         Qint_offset,
         Qsol_offset,
-        emission_factor=0,
+        emissions_factor=0,
+        temperature_factor=0,
+        tracking_factor=0,
     ):
         # TODO: normalize to make automatic
         self.gamma_scale = 1e0
@@ -59,7 +61,9 @@ class bldg_grid_agg_data_driven_mdl_large:
         self.Qsol_offset = Qsol_offset
 
         self.energy_red_weight = energy_red_weight
-        self.emission_factor = emission_factor
+        self.emissions_factor = emissions_factor
+        self.temperature_factor = temperature_factor
+        self.tracking_factor = tracking_factor
 
     def reinit(self, inputs, disturbances):
         # inputs
@@ -165,24 +169,17 @@ class bldg_grid_agg_data_driven_mdl_large:
         )
 
     def process_Q(self, Q):
-        # Set penalties for temperature ref. tracking
-        # lkj
+
         for i in np.arange(0, len(Q), 4):
-            if i == 0:
-                Q[i] = np.zeros(len(Q))
-            else:
-                # Q[i] = Q[i]*1.0e0 # 2.5e5, 5.0e5 for combined opt
-                Q[i] = np.zeros(len(Q))
+            Q[i] = Q[i] * self.temperature_factor
         # Set penalties for absolute power ref tracking to zero
         for i in np.arange(1, len(Q), 4):
             Q[i] = np.zeros(len(Q))
         for i in np.arange(2, len(Q), 4):
-            # Q[i] = np.zeros(len(Q))
-            Q[i] = Q[i] * 1.0e0
+            Q[i] = Q[i] * self.tracking_factor
         for i in np.arange(3, len(Q), 4):
-
             # Emissions terms
-            Q[i] = Q[i] * self.emission_factor
+            Q[i] = Q[i] * self.emissions_factor
 
         return Q
 
@@ -202,23 +199,23 @@ class bldg_grid_agg_data_driven_mdl_large:
         )
         return states
 
-    # AskChris
     # why are we adding C and D?
     def process_refs(self, refs):
         refs = (
             refs
             - np.array(
                 [
-                    [0],
-                    [self.truth_model_Pwr],
-                    [self.truth_model_Pwr],
-                    [self.truth_model_Pwr],
+                    [0],  # Temp
+                    [self.truth_model_Pwr],  # Abs Power
+                    [self.truth_model_Pwr],  # Error
+                    [self.truth_model_Pwr],  # Emission
                 ]
             )
             + self.Cy_lin
             + self.Dyu_lin
             + self.Dyd_lin
         )
+        print("Temperature:", refs[0])
         return refs
 
     def process_refs_horiz(self, refs, refs_const):

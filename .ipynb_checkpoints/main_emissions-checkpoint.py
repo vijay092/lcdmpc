@@ -596,8 +596,9 @@ for i in range(num_buildings_total):
 grid_prefs_ind = []
 for i in range(num_buildings_total):
     grid_prefs_ind.append([val[0][i][0] for val in outputs_all])
-print(grid_prefs_ind)
 
+# print(grid_prefs_ind)
+# lkj
 
 total_power = []
 grid_prefs_total = []
@@ -625,7 +626,6 @@ for i in range(num_buildings_total):
         np.array(plot_temps[i]).flatten()[dt_num_offset:],
     )
     # bldg_temp_legend.append('Large Office Building ' + str(i))
-# Outside air temperature
 ax2.plot(
     time_array[dt_num_offset:],
     disturbance_data.iloc[
@@ -633,19 +633,16 @@ ax2.plot(
     ]["T_outside"].values,
     color="gray",
 )
-# Lower limit for temperature
 ax2.plot(
     time_array[dt_num_offset:],
     T_lower * np.ones(len(time_array))[dt_num_offset:],
     "--k",
 )
-# Upper limit on temperature
 ax2.plot(
     time_array[dt_num_offset:],
     T_upper * np.ones(len(time_array))[dt_num_offset:],
     "--k",
 )
-# 
 ax2.plot(
     time_array[dt_num_offset:],
     (np.array(refs_large[0]) + 22.794)

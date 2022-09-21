@@ -37,7 +37,7 @@ def compute_emissons(
 ):
     dt_num_offset = 30
 
-    start_time = 24 * 60 - dt_num_offset  # Start time in minutes; 700
+    start_time = 4 * 60 - dt_num_offset  # Start time in minutes; 700
     dt = 1  # Time-step in minutes
 
     tmp = opt.LCDMPC(start_time, dt)
@@ -112,18 +112,13 @@ def compute_emissons(
     outputs1 = [1]
     outputs2 = [1]
 
-    # refs_large = [[0.0], [20.], [0.0]]
-    # refs_large = [[21.5 - 22.794], [20.], [0.0]]
-    # refs_large2 = [[21.5 - 22.794], [20.], [0.0]]
-    # refs_large3 = [[21.5 - 22.794], [20.], [0.0]]
-    refs_large = [[21.65 - 22.794], [20.0], [0.0], [0.0]]
-    #
+    temp_to_track = 21.65
+    refs_large = [[temp_to_track - 22.794], [20.0], [0.0], [0.0]]
+
     # Temperature, Building power cons, error, emissions.
     refs_large2 = [[21.5 - 22.794], [20.0], [0.0], [0.0]]
     refs_large3 = [[21.5 - 22.794], [20.0], [0.0], [0.0]]
-    # refs_60 = [[21.5 - 20.853], [20.], [0.0]]
-    # refs_62 = [[21.5 - 20.853], [20.], [0.0]]
-    # refs_large_all = [refs_60, refs_62]
+
     refs_large_all = [refs_large, refs_large2, refs_large3]
 
     refs_medium = [[21.5 - 23.8812], [20.0], [0.0]]
@@ -135,40 +130,60 @@ def compute_emissons(
     ]["T_outside"].values
     Toa_horiz_normed = Toa_horiz / Toa_horiz[0]
 
+    # np.random.seed(1)
+    # ## long term scenario (started from beginning)
+    # x = 30
+    # y = 30
+    # grid_agg_ref1 = np.random.normal(
+    #     6 * num_buildings_small
+    #     + 30 * num_buildings_medium
+    #     + 10 * num_buildings_large
+    #     + 40,
+    #     0.05,
+    #     x,
+    # )
+    # grid_agg_ref2 = np.random.normal(
+    #     6 * num_buildings_small
+    #     + 30 * num_buildings_medium
+    #     + 10 * num_buildings_large
+    #     + 40,
+    #     0.05,
+    #     y,
+    # )
+    # grid_agg_ref3 = np.random.normal(
+    #     6 * num_buildings_small
+    #     + 30 * num_buildings_medium
+    #     + 10 * num_buildings_large
+    #     + 40,
+    #     0.05,
+    #     (int(time / dt) - (x + y)) + horiz_len,
+    # )
+    # grid_agg_ref = np.concatenate(
+    #     (grid_agg_ref1, grid_agg_ref2, grid_agg_ref3)
+    # )
+
     np.random.seed(1)
-    ## long term scenario (started from beginning)
-    x = 30
-    y = 30
-    grid_agg_ref1 = np.random.normal(
-        6 * num_buildings_small
-        + 30 * num_buildings_medium
-        + 10 * num_buildings_large
-        + 40,
-        0.05,
-        x,
-    )
-    grid_agg_ref2 = np.random.normal(
-        6 * num_buildings_small
-        + 30 * num_buildings_medium
-        + 10 * num_buildings_large
-        + 40,
-        0.05,
-        y,
-    )
-    grid_agg_ref3 = np.random.normal(
-        6 * num_buildings_small
-        + 30 * num_buildings_medium
-        + 10 * num_buildings_large
-        + 40,
-        0.05,
-        (int(time / dt) - (x + y)) + horiz_len,
-    )
-    grid_agg_ref = np.concatenate(
-        (grid_agg_ref1, grid_agg_ref2, grid_agg_ref3)
+    grid_agg_ref = (
+        np.random.normal(
+            6 * num_buildings_small
+            + 20 * num_buildings_medium
+            + 10 * num_buildings_large,
+            0.0,
+            int(time / dt) + horiz_len,
+        )
+        # * Toa_horiz_normed
     )
 
-    plt.plot(grid_agg_ref)
-    plt.title("GA ref")
+    grid_agg_ref_unnnormed = np.random.normal(
+        6 * num_buildings_small
+        + 20 * num_buildings_medium
+        + 10 * num_buildings_large,
+        0.0,
+        int(time / dt) + horiz_len,
+    )
+
+    plt.plot(grid_agg_ref_unnnormed)
+    plt.title("GA ref unnormed")
 
     # This reference is for the grid aggregator, not the building
     refs_grid_total = pd.DataFrame()
@@ -497,7 +512,7 @@ def compute_emissons(
         "Grid Power Reference (kW)": grid_agg_ref[
             dt_num_offset - 1 : time - 1
         ],
-        "Error (%)": np.array(
+        "Error Power (%)": np.array(
             (
                 np.array(grid_agg_ref[dt_num_offset - 1 : time - 1])
                 - np.array(total_power).flatten()[dt_num_offset:]
@@ -505,6 +520,10 @@ def compute_emissons(
             / np.array(grid_agg_ref[dt_num_offset - 1 : time - 1])
             * 100
         ),
+        "Error Temperature (%)": (
+            temp_to_track - np.array(plot_temps[0][dt_num_offset:])
+        )
+        / temp_to_track
+        * 100,
     }
-
     return pd.DataFrame(return_dict)

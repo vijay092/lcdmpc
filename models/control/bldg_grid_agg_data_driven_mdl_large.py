@@ -79,6 +79,7 @@ class bldg_grid_agg_data_driven_mdl_large:
 
         # Model matrices
         # self.A = np.array([[0.9931]]) # 5 minute model
+        # So A is not relinei
         self.A = np.array([[0.9986]])  # 1 minute model
         # coefficients for Q_hvac (-ve value for cooling) - self.mean_inputs(4)
         # self.Bu = np.array([[0.0001263, 0.0, 0.0]])  # 5 minute model
@@ -178,7 +179,6 @@ class bldg_grid_agg_data_driven_mdl_large:
         for i in np.arange(2, len(Q), 4):
             Q[i] = Q[i] * self.tracking_factor
         for i in np.arange(3, len(Q), 4):
-            # Emissions terms
             Q[i] = Q[i] * self.emissions_factor
 
         return Q
@@ -201,6 +201,8 @@ class bldg_grid_agg_data_driven_mdl_large:
 
     # why are we adding C and D?
     def process_refs(self, refs):
+
+        #
         refs = (
             refs
             - np.array(
@@ -211,11 +213,11 @@ class bldg_grid_agg_data_driven_mdl_large:
                     [self.truth_model_Pwr],  # Emission
                 ]
             )
+            # delta y
             + self.Cy_lin
             + self.Dyu_lin
             + self.Dyd_lin
         )
-        print("Temperature:", refs[0])
         return refs
 
     def process_refs_horiz(self, refs, refs_const):
@@ -301,7 +303,7 @@ class bldg_grid_agg_data_driven_mdl_large:
             self.horiz_len,
             type="c",
             lower=0.0,
-            upper=100.0,
+            upper=15.0,
             value=0.8,
         )
         optProb.addVarGroup(

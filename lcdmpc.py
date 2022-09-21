@@ -78,7 +78,7 @@ class LCDMPC:
         self.current_time = self.current_time + self.time_step
         return outputs
 
-    def calc_stability(self):
+    def calc_stability(self): 
         Beta = self.subsystems[0].Beta
         horiz_len = self.subsystems[0].horiz_len
 
